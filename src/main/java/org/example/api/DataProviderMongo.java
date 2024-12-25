@@ -3,13 +3,12 @@ package org.example.api;
 import com.mongodb.client.*;
 import org.apache.log4j.Logger;
 import org.bson.Document;
-import org.example.models.HistoryContent;
+import org.example.models.PersForApi;
 import ru.sfedu.dubina.Constants;
 import com.mongodb.client.model.Filters;
 
-import java.time.LocalDateTime;
 
-public class DataProviderMongo {
+public class DataProviderMongo implements IDataProvider<PersForApi> {
     private MongoCollection<Document> collection;
     private Logger logger = Logger.getLogger(DataProviderMongo.class);
 
@@ -19,69 +18,52 @@ public class DataProviderMongo {
         this.collection = mongoDatabase.getCollection(Constants.COLLECTION_NAME);
     }
 
-    public void saveHistoryContent(HistoryContent historyContent) {
+
+    @Override
+    public void saveRecord(PersForApi record) {
         try {
-            Document document = new Document("id", historyContent.getId())
-                    .append("className", historyContent.getClassName())
-                    .append("createdDate", historyContent.getCreatedDate())
-                    .append("actor", historyContent.getActor())
-                    .append("methodName", historyContent.getMethodName())
-                    .append("object", historyContent.getObject())
-                    .append("status", historyContent.getStatus().toString());
+            Document document = new Document("id", record.getId())
+                    .append("name", record.getName())
+                    .append("email", record.getEmail());
 
             collection.insertOne(document);
-        }
-        catch (Exception exception) {
-            logger.error("произошла ошибка при сохранении");
+        } catch (Exception exception) {
+            logger.error("Ошибка при сохранении записи", exception);
         }
     }
-    public HistoryContent getHistoryContent(String id) {
-        try{
+
+    @Override
+    public void deleteRecord(Long id) {
+        try {
+            collection.deleteOne(Filters.eq("id", id));
+        } catch (Exception e) {
+            logger.error("Ошибка при удалении записи", e);
+        }
+    }
+
+    @Override
+    public PersForApi getRecordById(Long id) {
+        try {
             Document document = collection.find(Filters.eq("id", id)).first();
             if (document != null) {
-                HistoryContent historyContent = new HistoryContent();
-                historyContent.setId(document.getString("id"));
-                historyContent.setClassName(document.getString("className"));
-                historyContent.setCreatedDate(LocalDateTime.parse(document.getString("createdDate")));
-                historyContent.setActor(document.getString("actor"));
-                historyContent.setMethodName(document.getString("methodName"));
-
-                Document objectDoc = document.get("object", Document.class);
-
-                if (objectDoc != null){
-                    historyContent.setObject(objectDoc);
-                }
-                historyContent.setStatus(HistoryContent.Status.valueOf(document.getString("status")));
-                return historyContent;
+                return new PersForApi(
+                        document.getLong("id"),
+                        document.getString("name"),
+                        document.getString("email")
+                );
             }
-        }
-        catch (Exception e){
-            logger.error("error при получении данных");
+        } catch (Exception e) {
+            logger.error("Ошибка при получении записи", e);
         }
         return null;
     }
-    public void updateHistoryContent(HistoryContent historyContent) {
-        try{
-            Document updatedDoc = new Document("className", historyContent.getClassName())
-                    .append("createdDate", historyContent.getCreatedDate().toString())
-                    .append("actor", historyContent.getActor())
-                    .append("methodName", historyContent.getMethodName())
-                    .append("object", historyContent.getObject())
-                    .append("status", historyContent.getStatus().name());
-            collection.updateOne(Filters.eq("id", historyContent.getId()), new Document("$set", updatedDoc));
-        }
-        catch (Exception e) {
-            logger.error("ошибка при обновлении");
+
+    @Override
+    public void initDataSource() {
+        try {
+            logger.info("Инициализация источника данных MongoDB завершена успешно");
+        } catch (Exception e) {
+            logger.error("Ошибка при инициализации источника данных", e);
         }
     }
-    public void deleteHistoryContent(String id) {
-        try{
-            collection.deleteOne(Filters.eq("id", id));
-        }
-        catch (Exception e){
-            logger.error("ошибка при удалении");
-        }
-
-    }
-
 }

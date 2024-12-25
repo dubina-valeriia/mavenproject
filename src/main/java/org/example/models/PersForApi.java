@@ -1,6 +1,7 @@
 package org.example.models;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 public class PersForApi implements Serializable {
     private Long id;
@@ -11,6 +12,11 @@ public class PersForApi implements Serializable {
         this.id = id;
         this.name = name;
     }
+
+    public PersForApi() {
+
+    }
+
 
     public Long getId() {
         return id;
